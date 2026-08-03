@@ -78,6 +78,7 @@ const DEPOSIT_AMOUNT = process.env.DEPOSIT_AMOUNT ?? "1";
 const GAS_FUND_AMOUNT = parseEther("0.01");
 
 const endpoints = [
+  { url: `${BASE_URL}/api/premium/energy`, method: "GET" as const },
   { url: `${BASE_URL}/api/premium/quote`, method: "GET" as const },
   { url: `${BASE_URL}/api/premium/dataset`, method: "GET" as const },
   {

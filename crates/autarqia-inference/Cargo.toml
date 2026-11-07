@@ -1,0 +1,22 @@
+[package]
+name = "autarqia-inference"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+autarqia-primitives.workspace = true
+autarqia-subsystem-api.workspace = true
+tonic.workspace = true
+prost.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+futures.workspace = true
+hyper-util.workspace = true
+tower.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[build-dependencies]
+tonic-build.workspace = true

@@ -1,0 +1,17 @@
+[package]
+name = "autarqia-store"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+autarqia-primitives.workspace = true
+autarqia-subsystem-api.workspace = true
+rocksdb.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

@@ -1,0 +1,18 @@
+[package]
+name = "autarqia-payments"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+autarqia-primitives.workspace = true
+autarqia-subsystem-api.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+reqwest.workspace = true
+hex.workspace = true
+
+[dev-dependencies]
+k256.workspace = true

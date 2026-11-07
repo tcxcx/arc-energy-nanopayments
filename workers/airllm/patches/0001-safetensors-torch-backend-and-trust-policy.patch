@@ -1,0 +1,244 @@
+diff -ruN /tmp/autarqia-upstream/airllm/air_llm/airllm/__init__.py /Users/daniss/coding-dojo/autarquia/workers/airllm/vendor/air_llm/airllm/__init__.py
+--- /tmp/autarqia-upstream/airllm/air_llm/airllm/__init__.py	2026-11-07 09:44:19
++++ /Users/daniss/coding-dojo/autarquia/workers/airllm/vendor/air_llm/airllm/__init__.py	2026-11-07 09:53:40
+@@ -1,25 +1,20 @@
++import os
+ from sys import platform
+ 
+-is_on_mac_os = False
++use_mlx_on_mac = (
++    platform == "darwin"
++    and os.environ.get("AUTARQIA_AIRLLM_BACKEND", "torch").lower() == "mlx"
++)
+ 
+-if platform == "darwin":
+-    is_on_mac_os = True
+-
+-if is_on_mac_os:
++if use_mlx_on_mac:
+     from .airllm_llama_mlx import AirLLMLlamaMlx
+     from .auto_model import AutoModel
+ else:
+-    # Core entry points. These have no model-specific optional dependencies, so a plain
+-    # `import airllm` always works as long as torch/transformers are installed.
+     from .airllm_base import AirLLMBaseModel
+     from .auto_model import AutoModel
+     from .utils import split_and_save_layers
+     from .utils import NotEnoughSpaceException
+ 
+-    # Dedicated subclasses for a handful of custom-architecture models. Some of them pull in
+-    # optional extras (e.g. the Baichuan tokenizer needs `sentencepiece`). Import them defensively
+-    # so a missing optional dependency for one niche family never breaks the whole package; the
+-    # generic AirLLMBaseModel path keeps working regardless.
+     import warnings as _warnings
+ 
+     for _name, _module in (
+@@ -40,9 +35,8 @@
+         try:
+             _mod = __import__(__name__ + _module, fromlist=[_name])
+             globals()[_name] = getattr(_mod, _name)
+-        except Exception as _e:  # noqa: BLE001 - optional family, keep package importable
++        except Exception as _e:  # noqa: BLE001
+             _warnings.warn(
+                 f"airllm: optional model class {_name} is unavailable ({_e}). "
+                 f"This only affects that specific model family; the generic streaming path still works."
+             )
+-
+diff -ruN /tmp/autarqia-upstream/airllm/air_llm/airllm/airllm_base.py /Users/daniss/coding-dojo/autarquia/workers/airllm/vendor/air_llm/airllm/airllm_base.py
+--- /tmp/autarqia-upstream/airllm/air_llm/airllm/airllm_base.py	2026-11-07 09:44:19
++++ /Users/daniss/coding-dojo/autarquia/workers/airllm/vendor/air_llm/airllm/airllm_base.py	2026-11-07 09:53:55
+@@ -84,7 +84,8 @@
+     def __init__(self, model_local_path_or_repo_id, device=None, dtype=None, max_seq_len=512,
+                  layer_shards_saving_path=None, profiling_mode=False, compression=None,
+                  hf_token=None, prefetching=True, delete_original=False,
+-                 install_hooks=True, load_resident=True):
++                 install_hooks=True, load_resident=True, trust_remote_code=False,
++                 local_files_only=False):
+         """
+         Parameters
+         ----------
+@@ -150,19 +151,15 @@
+         self.running_device = device if device is not None else default_device()
+         self.device = torch.device(self.running_device)
+ 
+-        # Prefer transformers' native implementation; only trust the model's bundled remote code when
+-        # transformers doesn't recognize the architecture. Vendored remote code is frequently pinned
+-        # to an old transformers and breaks against the current cache/generation APIs (e.g.
+-        # DeepSeek-V2's modeling_deepseek.py calls the long-removed DynamicCache.seen_tokens).
++        self.trust_remote_code = bool(trust_remote_code)
++        self.local_files_only = bool(local_files_only)
+         token_kwargs = {'token': hf_token} if hf_token is not None else {}
+-        try:
+-            self.config = AutoConfig.from_pretrained(
+-                self.model_local_path, trust_remote_code=False, **token_kwargs)
+-            self.trust_remote_code = False
+-        except Exception:
+-            self.config = AutoConfig.from_pretrained(
+-                self.model_local_path, trust_remote_code=True, **token_kwargs)
+-            self.trust_remote_code = True
++        self.config = AutoConfig.from_pretrained(
++            self.model_local_path,
++            trust_remote_code=self.trust_remote_code,
++            local_files_only=self.local_files_only,
++            **token_kwargs,
++        )
+ 
+         # Default to the model's native dtype (bf16 for most modern models). Forcing fp16 overflows
+         # on deep models (e.g. Qwen3-235B's 94 layers) and produces garbage; bf16's wider range
+@@ -217,15 +214,21 @@
+ 
+     def get_generation_config(self):
+         try:
+-            return GenerationConfig.from_pretrained(self.model_local_path)
++            return GenerationConfig.from_pretrained(
++                self.model_local_path,
++                local_files_only=self.local_files_only,
++            )
+         except Exception:
+             return GenerationConfig()
+ 
+     def get_tokenizer(self, hf_token=None):
++        tok_kwargs = {
++            "trust_remote_code": self.trust_remote_code,
++            "local_files_only": self.local_files_only,
++        }
+         if hf_token is not None:
+-            return AutoTokenizer.from_pretrained(self.model_local_path, token=hf_token, trust_remote_code=True)
+-        else:
+-            return AutoTokenizer.from_pretrained(self.model_local_path, trust_remote_code=True)
++            tok_kwargs["token"] = hf_token
++        return AutoTokenizer.from_pretrained(self.model_local_path, **tok_kwargs)
+ 
+     # ---- model construction -----------------------------------------------------------------
+ 
+diff -ruN /tmp/autarqia-upstream/airllm/air_llm/airllm/auto_model.py /Users/daniss/coding-dojo/autarquia/workers/airllm/vendor/air_llm/airllm/auto_model.py
+--- /tmp/autarqia-upstream/airllm/air_llm/airllm/auto_model.py	2026-11-07 09:44:19
++++ /Users/daniss/coding-dojo/autarquia/workers/airllm/vendor/air_llm/airllm/auto_model.py	2026-11-07 09:53:40
+@@ -1,19 +1,16 @@
+ import importlib
+-from transformers import AutoConfig
++import os
+ from sys import platform
++from transformers import AutoConfig
+ 
+-is_on_mac_os = False
++use_mlx_on_mac = (
++    platform == "darwin"
++    and os.environ.get("AUTARQIA_AIRLLM_BACKEND", "torch").lower() == "mlx"
++)
+ 
+-if platform == "darwin":
+-    is_on_mac_os = True
+-
+-if is_on_mac_os:
++if use_mlx_on_mac:
+     from airllm import AirLLMLlamaMlx
+ 
+-# Architectures that need a dedicated AirLLM subclass because of a non-standard module layout
+-# (custom remote-code models). Everything else uses the generic AirLLMBaseModel, which streams any
+-# standard *ForCausalLM (model.model.layers + lm_head / norm) and lets transformers own the
+-# forward pass, so newly released architectures work without code changes.
+ ARCH_OVERRIDES = {
+     "ChatGLMModel": "AirLLMChatGLM",
+     "ChatGLMForConditionalGeneration": "AirLLMChatGLM",
+@@ -26,8 +23,6 @@
+     "Qwen4ExpForConditionalGeneration": "AirLLMQwen4Exp",
+ }
+ 
+-# On macOS every model goes through AirLLMLlamaMlx, an MLX port of the Llama decoder block, so only
+-# checkpoints with that layout can run there. Mistral uses the same block and weight names.
+ MLX_ARCHITECTURES = {"LlamaForCausalLM", "MistralForCausalLM"}
+ 
+ 
+@@ -40,12 +35,15 @@
+ 
+     @classmethod
+     def get_architecture(cls, pretrained_model_name_or_path, *inputs, **kwargs):
+-        if 'hf_token' in kwargs:
+-            config = AutoConfig.from_pretrained(pretrained_model_name_or_path, trust_remote_code=True,
+-                                                token=kwargs['hf_token'])
+-        else:
+-            config = AutoConfig.from_pretrained(pretrained_model_name_or_path, trust_remote_code=True)
+-
++        trust_remote_code = bool(kwargs.get("trust_remote_code", False))
++        local_files_only = bool(kwargs.get("local_files_only", False))
++        cfg_kwargs = {
++            "trust_remote_code": trust_remote_code,
++            "local_files_only": local_files_only,
++        }
++        if "hf_token" in kwargs and kwargs["hf_token"] is not None:
++            cfg_kwargs["token"] = kwargs["hf_token"]
++        config = AutoConfig.from_pretrained(pretrained_model_name_or_path, **cfg_kwargs)
+         architectures = getattr(config, "architectures", None) or []
+         return architectures[0] if architectures else ""
+ 
+@@ -61,17 +59,19 @@
+ 
+     @classmethod
+     def from_pretrained(cls, pretrained_model_name_or_path, *inputs, **kwargs):
+-
+-        if is_on_mac_os:
+-            # Check this before AirLLMLlamaMlx downloads and splits the whole checkpoint, otherwise an
+-            # unsupported model only fails (or gives garbage) after that is done.
++        backend = kwargs.pop(
++            "backend",
++            os.environ.get("AUTARQIA_AIRLLM_BACKEND", "torch"),
++        ).lower()
++        if platform == "darwin" and backend == "mlx":
++            from .airllm_llama_mlx import AirLLMLlamaMlx as _MlxModel
+             arch = AutoModel.get_architecture(pretrained_model_name_or_path, *inputs, **kwargs)
+             if arch and arch not in MLX_ARCHITECTURES:
+                 raise ValueError(
+-                    f"{arch} is not supported on macOS yet. The macOS backend (MLX) only runs "
+-                    f"Llama-style models: {', '.join(sorted(MLX_ARCHITECTURES))}."
++                    f"{arch} is not supported on macOS MLX backend yet. "
++                    f"Use backend='torch' or one of: {', '.join(sorted(MLX_ARCHITECTURES))}."
+                 )
+-            return AirLLMLlamaMlx(pretrained_model_name_or_path, *inputs, **kwargs)
++            return _MlxModel(pretrained_model_name_or_path, *inputs, **kwargs)
+ 
+         module, class_name = AutoModel.get_module_class(pretrained_model_name_or_path, *inputs, **kwargs)
+         module = importlib.import_module(module)
+diff -ruN /tmp/autarqia-upstream/airllm/air_llm/airllm/persist/model_persister.py /Users/daniss/coding-dojo/autarquia/workers/airllm/vendor/air_llm/airllm/persist/model_persister.py
+--- /tmp/autarqia-upstream/airllm/air_llm/airllm/persist/model_persister.py	2026-11-07 09:44:19
++++ /Users/daniss/coding-dojo/autarquia/workers/airllm/vendor/air_llm/airllm/persist/model_persister.py	2026-11-07 09:53:40
+@@ -1,8 +1,9 @@
++import os
++from sys import platform
+ 
+-
+-
+ model_persister = None
+ 
++
+ class ModelPersister:
+     def __init__(self):
+         pass
+@@ -13,15 +14,12 @@
+         if model_persister is not None:
+             return model_persister
+ 
++        use_mlx_on_mac = (
++            platform == "darwin"
++            and os.environ.get("AUTARQIA_AIRLLM_BACKEND", "torch").lower() == "mlx"
++        )
+ 
+-        from sys import platform
+-        is_on_mac_os = False
+-
+-        if platform == "darwin":
+-            is_on_mac_os = True
+-
+-
+-        if is_on_mac_os:
++        if use_mlx_on_mac:
+             from .mlx_model_persister import MlxModelPersister
+             model_persister = MlxModelPersister()
+         else:
+@@ -36,4 +34,4 @@
+         pass
+ 
+     def load_model(self, layer_name, path):
+-        pass
+\ No newline at end of file
++        pass

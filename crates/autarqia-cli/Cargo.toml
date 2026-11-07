@@ -1,0 +1,28 @@
+[package]
+name = "autarqia-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "autarqia_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "autarqia-cli"
+path = "src/main.rs"
+
+[dependencies]
+autarqia-primitives.workspace = true
+autarqia-subsystem-api.workspace = true
+axum.workspace = true
+clap.workspace = true
+futures.workspace = true
+hex.workspace = true
+k256.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+uuid.workspace = true

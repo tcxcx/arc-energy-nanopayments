@@ -1,0 +1,135 @@
+{
+  "schemaVersion": "1.0.0",
+  "verifiedAt": "2026-11-07T17:50:00Z",
+  "profile": {
+    "urn": "urn:autarqia:mppi:acknowledged-usage:0",
+    "schemaVersion": "0.1.0",
+    "eip712OffchainDomain": {
+      "name": "AutarqiaMPPIRun",
+      "version": "0"
+    },
+    "eip712VoucherDomain": {
+      "name": "AndoMPPI",
+      "version": "1",
+      "voucherType": "Voucher(bytes32 channelId,uint128 cumulativeAmount)"
+    },
+    "eip712GatewayDomain": {
+      "name": "GatewayWalletBatched",
+      "version": "1"
+    }
+  },
+  "sources": {
+    "arcEnergyNanopayments": {
+      "repository": "https://github.com/tcxcx/arc-energy-nanopayments",
+      "pinnedCommit": "e9a24858fdc95164ea51b036f5c24251acef8d1f",
+      "workingBranch": "codex/autarqia-dag-foundation",
+      "handoffReferenceCommit": "2500673e95268d3f94d6c12bb8aaf6264e6c4ca1",
+      "handoffReferenceCommitStatus": "not-present-on-origin-started-from-verified-master-e9a24858",
+      "license": "Apache-2.0"
+    },
+    "andoMppi": {
+      "repository": "https://github.com/Ando-OSS/mpp-i",
+      "pinnedCommit": "aae26d7a3aaa36857b3f1f01abfa62735b72ff59",
+      "implementationCommit": "518650aa2358a06ba5eca0cdce05327460792e1e",
+      "paperVersion": "1.0",
+      "paperAuthors": "Jamie, Alethieum",
+      "paperDoi": "https://doi.org/10.5281/zenodo.21017440",
+      "paperLicense": "CC-BY-4.0",
+      "codeLicense": "Apache-2.0",
+      "artifacts": {
+        "IAndoMPPI.sol": {
+          "path": "contracts/arc/v1/src/IAndoMPPI.sol",
+          "sha256": "36e32a7dba20f0cb1087ec285f84b5e4cad09b3c322eff7453465124f77c8d65"
+        },
+        "AndoMPPI.sol": {
+          "path": "contracts/arc/v1/src/AndoMPPI.sol",
+          "sha256": "64aad83d3a91f4c8f4978fef46f1954ff521596489d00be4d905271e488f91d6"
+        },
+        "arc-testnet.json": {
+          "path": "contracts/arc/deployments/arc-testnet.json",
+          "sha256": "e9e9852bfcd0a3132e3174a30fedfe73870eacf9bdc74c24e689d21a071a861f"
+        },
+        "mpp-i-paper-v1.0.tex": {
+          "path": "paper/mpp-i-paper-v1.0.tex",
+          "sha256": "a769a3cbb0ed218c9aa52cf918cf1088f9eb1ebfdb74fde56e746a27aada1b7e"
+        }
+      },
+      "limitations": [
+        "Pre-audit review deployment on Arc Testnet only (production: false, auditStatus: not-audited).",
+        "No upstream provider SDK or normative HTTP wire specification exists in Ando-OSS/mpp-i.",
+        "AndoMPPI v1 settles exact cumulative voucher amounts (Voucher(bytes32 channelId,uint128 cumulativeAmount)); it does not verify model token counts or allow partial redemption below the signed cumulativeAmount."
+      ]
+    },
+    "airllm": {
+      "repository": "https://github.com/lyogavin/airllm",
+      "pinnedCommit": "c4c9de3d41e73770b95716bd447e53f049a2bc85",
+      "packageVersion": "4.0.0",
+      "codeLicense": "MIT",
+      "localPatch": "workers/airllm/patches/0001-safetensors-torch-backend-and-trust-policy.patch",
+      "artifacts": {
+        "airllm_base.py": {
+          "path": "air_llm/airllm/airllm_base.py",
+          "sha256": "a7b32ee7672789b8e02dda9cbc1e33d642e5d59111d546d5eb1e9f1cfe4c4347"
+        },
+        "auto_model.py": {
+          "path": "air_llm/airllm/auto_model.py",
+          "sha256": "c656597ef083041ab670b0c0141146b9e7d50bb7b0efcfd0573932ca8bbd06bc"
+        },
+        "utils.py": {
+          "path": "air_llm/airllm/utils.py",
+          "sha256": "de6e37fb5ccacbffbad0af101bea30c8032bc016653ed253e953ce6ad6ff21c8"
+        }
+      },
+      "limitations": [
+        "Upstream auto_model.py routes darwin to AirLLMLlamaMlx (.mlx.npz) which lacks transformers streamer/stopping_criteria delegation; local patch enables AirLLMBaseModel + SafetensorModelPersister on torch (CUDA/MPS/CPU) and enforces trust_remote_code=False by default.",
+        "Model weights and tokenizers retain their own upstream model licenses separate from AirLLM MIT code."
+      ]
+    },
+    "stableFxRustEngine": {
+      "repository": "https://github.com/tcxcx/stable-fx-rust-engine",
+      "pinnedCommit": "bb9f8160faf44cb8b8db512bd765c5c871120d20",
+      "usage": "Architectural reference for 5-layer Polkadot-style DAG, NodeOverseer, CriticalTaskSupervisor, BoundedSubsystemMailbox, and Arc EIP-7708 duplicate system transfer log filtering."
+    }
+  },
+  "networks": {
+    "arcTestnet": {
+      "name": "Arc Testnet",
+      "chainId": 5042002,
+      "caip2": "eip155:5042002",
+      "rpcUrl": "https://rpc.testnet.arc.network",
+      "explorerUrl": "https://testnet.arcscan.app",
+      "contracts": {
+        "usdcErc20": {
+          "address": "0x3600000000000000000000000000000000000000",
+          "decimals": 6
+        },
+        "nativeGasUsdcSystemEmitter": {
+          "address": "0xffffFFFfFFffffffffffffffFfFFFfffFFFfFFfE",
+          "decimals": 18,
+          "note": "EIP-7708 native transfer log emitter; must be filtered when indexing 6-decimal ERC-20 USDC transfers."
+        },
+        "eurcErc20": {
+          "address": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+          "decimals": 6
+        },
+        "circleGatewayWallet": {
+          "address": "0x0077777d7EBA4688BDeF3E311b846F25870A19B9"
+        },
+        "andoMppiProxy": {
+          "address": "0xbdc5891b1372D7572046e41E1e38159c9A7fe638",
+          "domainSeparator": "0x8c4a261dc84bafb5b349d4a1c8dbac75de4246972ac9531ade334e690b323768",
+          "closeGracePeriodSeconds": 900,
+          "maxBatchSize": 256,
+          "production": false,
+          "auditStatus": "not-audited"
+        },
+        "andoMppiImplementation": {
+          "address": "0xca8AcB9Cc1bEEEaAcc7061C085D104ebA5161da0",
+          "publishedRuntimeBytecodeKeccak256": "0xef1bb6063d401b059b3046b5f4fec9e50eb70688e333fecdc9c4f2723412d14a",
+          "observedRuntimeBytecodeKeccak256": "0xef1bb6063d401b059b3046b5f4fec9e50eb70688e333fecdc9c4f2723412d14a",
+          "verifiedOnNetworkAt": "2026-11-07T17:48:55Z"
+        }
+      }
+    }
+  }
+}

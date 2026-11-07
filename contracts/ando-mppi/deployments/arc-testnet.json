@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "release": "AndoMPPI-v1",
+  "status": "pre-audit-review",
+  "production": false,
+  "auditStatus": "not-audited",
+  "network": {
+    "name": "Arc Testnet",
+    "chainId": 5042002,
+    "explorer": "https://testnet.arcscan.app"
+  },
+  "source": {
+    "repository": "https://github.com/Ando-OSS/mpp-i",
+    "commit": "518650aa2358a06ba5eca0cdce05327460792e1e",
+    "implementationPath": "contracts/arc/v1/src/AndoMPPI.sol",
+    "compilerVersion": "0.8.30",
+    "evmVersion": "prague",
+    "optimizer": true,
+    "optimizerRuns": 10000,
+    "runtimeBytecodeKeccak256": "0xef1bb6063d401b059b3046b5f4fec9e50eb70688e333fecdc9c4f2723412d14a"
+  },
+  "deployment": {
+    "deployedAt": "2026-07-29T23:41:06Z",
+    "deployer": "0x5Cd5900Aff2ED8A3701bf048Cf6fDF1EdF4B96EB",
+    "transactions": {
+      "timelock": "0x04f36d37b002ecc2266fda428eceb10e6f64ea51b9a0b0bf13c048c5e18bb6d4",
+      "implementation": "0x28a849b14c0377c5fda0edb32771025c91bed96f46a6a1b7908c7083dd26361e",
+      "proxyAndProxyAdmin": "0x9a444c9b10671ae01e55c28cfb321c18199bb75f4e86e650086816f53859bad8"
+    },
+    "blocks": {
+      "timelock": 54334320,
+      "implementation": 54334322,
+      "proxyAndProxyAdmin": 54334324
+    }
+  },
+  "contracts": {
+    "proxy": {
+      "address": "0xbdc5891b1372D7572046e41E1e38159c9A7fe638",
+      "verified": true,
+      "explorerUrl": "https://testnet.arcscan.app/address/0xbdc5891b1372D7572046e41E1e38159c9A7fe638"
+    },
+    "implementation": {
+      "address": "0xca8AcB9Cc1bEEEaAcc7061C085D104ebA5161da0",
+      "verified": true,
+      "explorerUrl": "https://testnet.arcscan.app/address/0xca8AcB9Cc1bEEEaAcc7061C085D104ebA5161da0"
+    },
+    "proxyAdmin": {
+      "address": "0xC9a014FD5dBD28B858f242fD593Ef1d812C6a831",
+      "verified": true,
+      "explorerUrl": "https://testnet.arcscan.app/address/0xC9a014FD5dBD28B858f242fD593Ef1d812C6a831"
+    },
+    "timelock": {
+      "address": "0x38B6AA1caCc428082b0eC289BD8A1f00Fd52d2D7",
+      "verified": true,
+      "explorerUrl": "https://testnet.arcscan.app/address/0x38B6AA1caCc428082b0eC289BD8A1f00Fd52d2D7"
+    }
+  },
+  "configuration": {
+    "contractVersion": 1,
+    "acceptedCurrencies": {
+      "USDC": "0x3600000000000000000000000000000000000000",
+      "EURC": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a"
+    },
+    "upgradeability": {
+      "pattern": "TransparentUpgradeableProxy",
+      "proxyAdminOwner": "0x38B6AA1caCc428082b0eC289BD8A1f00Fd52d2D7",
+      "timelockDelaySeconds": 172800
+    },
+    "governance": {
+      "protocolAdmin": "0x38B6AA1caCc428082b0eC289BD8A1f00Fd52d2D7",
+      "proposer": "0x5Cd5900Aff2ED8A3701bf048Cf6fDF1EdF4B96EB",
+      "canceller": "0x5Cd5900Aff2ED8A3701bf048Cf6fDF1EdF4B96EB",
+      "executor": "0x0000000000000000000000000000000000000000",
+      "executorPolicy": "permissionless-after-delay",
+      "guardian": "0x5Cd5900Aff2ED8A3701bf048Cf6fDF1EdF4B96EB"
+    }
+  },
+  "implementationHistory": [
+    {
+      "contractVersion": 1,
+      "implementation": "0xca8AcB9Cc1bEEEaAcc7061C085D104ebA5161da0",
+      "activatedAtBlock": 54334324,
+      "sourceCommit": "518650aa2358a06ba5eca0cdce05327460792e1e",
+      "runtimeBytecodeKeccak256": "0xef1bb6063d401b059b3046b5f4fec9e50eb70688e333fecdc9c4f2723412d14a"
+    }
+  ]
+}

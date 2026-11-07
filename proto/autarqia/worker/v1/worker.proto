@@ -1,0 +1,169 @@
+syntax = "proto3";
+
+package autarqia.worker.v1;
+
+service AirLlmWorkerService {
+  rpc DescribeWorker(DescribeWorkerRequest) returns (DescribeWorkerResponse);
+  rpc Prepare(PrepareRequest) returns (PrepareResponse);
+  rpc Generate(GenerateRequest) returns (stream GenerateEvent);
+  rpc UpdateAllowance(UpdateAllowanceRequest) returns (UpdateAllowanceResponse);
+  rpc Cancel(CancelRequest) returns (CancelResponse);
+  rpc Drain(DrainRequest) returns (DrainResponse);
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+message DescribeWorkerRequest {}
+
+message DescribeWorkerResponse {
+  string worker_id = 1;
+  uint64 worker_epoch = 2;
+  string engine_name = 3;
+  string airllm_commit = 4;
+  string patch_sha256 = 5;
+  string model_id = 6;
+  string model_revision = 7;
+  string tokenizer_sha256 = 8;
+  string chat_template_sha256 = 9;
+  string original_manifest_sha256 = 10;
+  string split_manifest_sha256 = 11;
+  string runtime_device = 12;
+  string runtime_dtype = 13;
+  uint32 tested_context_limit = 14;
+  uint32 max_prefill_tokens = 15;
+  uint32 uninterruptible_step_tokens = 16;
+  bool trust_remote_code = 17;
+  bool ready = 18;
+  string python_version = 19;
+  string torch_version = 20;
+  string transformers_version = 21;
+}
+
+message ChatMessage {
+  string role = 1;
+  string content = 2;
+}
+
+message PrepareRequest {
+  string run_id = 1;
+  uint64 worker_epoch = 2;
+  uint64 owner_fence = 3;
+  repeated ChatMessage messages = 4;
+  uint32 max_output_tokens = 5;
+  uint32 temperature_milli = 6;
+  uint32 top_p_milli = 7;
+  uint64 seed = 8;
+}
+
+message PrepareResponse {
+  string prepared_input_id = 1;
+  string run_id = 2;
+  uint32 input_token_count = 3;
+  repeated uint32 input_token_ids = 4;
+  string prompt_sha256 = 5;
+  uint32 tested_context_limit = 6;
+}
+
+message InternalWorkAllowance {
+  string run_id = 1;
+  uint64 worker_epoch = 2;
+  uint64 owner_fence = 3;
+  uint64 admission_epoch = 4;
+  uint64 allowance_seq = 5;
+  uint32 max_output_seq_exclusive = 6;
+  uint64 expires_at_monotonic_ms = 7;
+  uint64 ledger_version = 8;
+}
+
+message GenerateRequest {
+  string run_id = 1;
+  string prepared_input_id = 2;
+  InternalWorkAllowance initial_allowance = 3;
+}
+
+message GenerateEvent {
+  string run_id = 1;
+  uint64 worker_epoch = 2;
+  uint64 admission_epoch = 3;
+  oneof event {
+    PrefillCompletedEvent prefill_completed = 4;
+    TokenDeltaEvent token_delta = 5;
+    LowHeadroomEvent low_headroom = 6;
+    TerminalEvent terminal = 7;
+  }
+}
+
+message PrefillCompletedEvent {
+  uint32 input_tokens_processed = 1;
+  uint64 elapsed_monotonic_ms = 2;
+}
+
+message TokenDeltaEvent {
+  uint32 output_seq = 1;
+  uint32 token_id = 2;
+  string text_delta = 3;
+  string prefix_commitment = 4;
+  bool is_special_token = 5;
+  uint64 allowance_seq_used = 6;
+  uint64 elapsed_monotonic_ms = 7;
+}
+
+message LowHeadroomEvent {
+  uint32 current_output_seq = 1;
+  uint32 max_output_seq_exclusive = 2;
+  uint64 allowance_seq = 3;
+}
+
+message TerminalEvent {
+  string status = 1;
+  uint32 input_tokens_processed = 2;
+  uint32 output_tokens_generated = 3;
+  string final_prefix_commitment = 4;
+  string detail = 5;
+  uint64 elapsed_monotonic_ms = 6;
+}
+
+message UpdateAllowanceRequest {
+  InternalWorkAllowance allowance = 1;
+}
+
+message UpdateAllowanceResponse {
+  bool accepted = 1;
+  string rejection_reason = 2;
+  uint64 active_allowance_seq = 3;
+  uint32 active_max_output_seq_exclusive = 4;
+}
+
+message CancelRequest {
+  string run_id = 1;
+  uint64 worker_epoch = 2;
+  uint64 owner_fence = 3;
+  uint64 admission_epoch = 4;
+  string reason = 5;
+}
+
+message CancelResponse {
+  bool cancelled = 1;
+  uint32 stopped_at_output_seq = 2;
+}
+
+message DrainRequest {
+  uint64 worker_epoch = 1;
+  uint64 owner_fence = 2;
+  string reason = 3;
+}
+
+message DrainResponse {
+  bool draining = 1;
+  string active_run_id = 2;
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  bool healthy = 1;
+  bool draining = 2;
+  uint64 worker_epoch = 3;
+  string active_run_id = 4;
+  uint64 rss_bytes = 5;
+  string runtime_device = 6;
+}

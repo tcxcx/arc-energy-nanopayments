@@ -40,3 +40,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# rust & autarqia runtime artifacts
+/target/
+/data/
+/workers/airllm/.venv/
+/workers/airllm/vendor/
+/contracts/ando-mppi/out/
+/contracts/ando-mppi/cache/
+/contracts/ando-mppi/dependencies/
+__pycache__/
+*.py[cod]
+*.sock
